@@ -150,6 +150,7 @@ void usage(void) {
     printf(" -b: Bold characters on\n");
     printf(" -B: All bold characters (overrides -b)\n");
     printf(" -c: Use Japanese characters as seen in the original matrix. Requires appropriate fonts\n");
+    printf(" -d: DNA modus (ACTG)\n");
     printf(" -f: Force the linux $TERM type to be on\n");
     printf(" -l: Linux mode (uses matrix console font)\n");
     printf(" -L: Lock mode (can be closed from another terminal)\n");
@@ -329,6 +330,7 @@ int main(int argc, char *argv[]) {
     int pause = 0;
     int classic = 0;
     int changes = 0;
+    int dna = 0;
     char *msg = "";
     char *tty = NULL;
 
@@ -337,7 +339,7 @@ int main(int argc, char *argv[]) {
 
     /* Many thanks to morph- (morph@jmss.com) for this getopt patch */
     opterr = 0;
-    while ((optchr = getopt(argc, argv, "abBcfhlLnrosmxkVM:u:C:t:")) != EOF) {
+    while ((optchr = getopt(argc, argv, "abBcdfhlLnrosmxkVM:u:C:t:")) != EOF) {
         switch (optchr) {
         case 's':
             screensaver = 1;
@@ -378,6 +380,9 @@ int main(int argc, char *argv[]) {
             break;
         case 'c':
             classic = 1;
+            break;
+        case 'd':
+            dna = 1;
             break;
         case 'f':
             force = 1;
@@ -519,11 +524,20 @@ if (console) {
         }
     }
 
+    char dna_dict[255];
+    dna_dict[65] = 'A';
+    dna_dict[66] = 'C';
+    dna_dict[67] = 'T';
+    dna_dict[68] = 'G';
+
     /* Set up values for random number generation */
     if (classic) {
         /* Japanese character unicode range [they are seen in the original cmatrix] */
         randmin = 12288;
         highnum = 12351;
+    } else if (dna) {
+        randmin = 65;
+        highnum = 33 + 4;
     } else if (console || xwindow) {
         randmin = 166;
         highnum = 217;
@@ -694,7 +708,11 @@ if (console) {
                     } else if (matrix[0][j].val == -1
                         && matrix[1][j].val == ' ') {
                         length[j] = (int) rand() % (LINES - 3) + 3;
-                        matrix[0][j].val = (int) rand() % randnum + randmin;
+                        if(dna) {
+                            matrix[0][j].val = dna_dict[(unsigned char) (rand() % 4 + randmin)];
+                        } else {
+                            matrix[0][j].val = (int) rand() % randnum + randmin;
+                        }
 
                         spaces[j] = (int) rand() % LINES + 1;
                     }
@@ -721,7 +739,12 @@ if (console) {
                             matrix[i][j].is_head = false;
                             if (changes) {
                                 if (rand() % 8 == 0)
-                                    matrix[i][j].val = (int) rand() % randnum + randmin;
+                                    if(dna) {
+                                        //printf("%i\n", (rand() % randnum + randmin));
+                                        matrix[i][j].val = dna_dict[(unsigned char) (rand() % 4 + randmin)];
+                                    } else {
+                                        matrix[i][j].val = (int) rand() % randnum + randmin;
+                                    }
                             }
                             i++;
                             y++;
@@ -732,7 +755,13 @@ if (console) {
                             continue;
                         }
 
-                        matrix[i][j].val = (int) rand() % randnum + randmin;
+                        if(dna) {
+                            //printf("%i [randnum = %i, randmin=%i]\n", (rand() % randnum + randmin), randnum, randmin);
+                            matrix[i][j].val = dna_dict[(unsigned char) (rand() % 4 + randmin)];
+                        } else {
+                            matrix[i][j].val = (int) rand() % randnum + randmin;
+                        }
+
                         matrix[i][j].is_head = true;
 
                         /* If we're at the top of the column and it's reached its
